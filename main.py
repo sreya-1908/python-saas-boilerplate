@@ -150,7 +150,8 @@ app.include_router(payments.router)
 
 @app.get("/", response_class=HTMLResponse)
 def serve_home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Pass context safely using explicit keyword notation to satisfy Python 3.14 requirements
+    return templates.TemplateResponse(request=request, name="index.html")
 
 @app.post("/register")
 def register_user(email: str, password: str, db: Session = Depends(database.get_db)):
