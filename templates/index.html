@@ -1,0 +1,269 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Boilerplate Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen flex items-center justify-center p-6">
+
+    <div id="login-card" class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-700">
+        <h2 class="text-2xl font-bold mb-6 text-center text-blue-400">Welcome to Your SaaS</h2>
+        <p class="text-gray-400 text-sm mb-6 text-center">Log in to access your secure developer dashboard.</p>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Email Address</label>
+                <input id="email" type="email" placeholder="you@example.com" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Password</label>
+                <input id="password" type="password" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold p-3 rounded-lg transition duration-200 mt-2 cursor-pointer">
+                Log In & Open Dashboard
+            </button>
+            <p id="error-msg" class="text-red-400 text-sm text-center hidden mt-2"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-card" class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-700 hidden">
+        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+            <div>
+                <h2 class="text-2xl font-bold text-green-400">Secure Dashboard</h2>
+                <p id="user-display" class="text-gray-400 text-sm mt-1"></p>
+            </div>
+            <button onclick="handleLogout()" class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs px-4 py-2 rounded-lg transition duration-200 cursor-pointer">
+                Log Out
+            </button>
+        </div>
+        
+        <div class="bg-gray-900 p-6 rounded-xl border border-gray-700">
+            <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Live Dynamic Server Payload</h3>
+            <p id="dashboard-data" class="text-gray-200 font-mono text-sm leading-relaxed"></p>
+        </div>
+    </div>
+
+    <script>
+        // async function handleLogin() {
+        //     const email = document.getElementById('email').value;
+        //     const password = document.getElementById('password').value;
+        //     const errorMsg = document.getElementById('error-msg');
+
+        //     errorMsg.classList.add('hidden');
+
+        //     // Form data structure that OAuth2PasswordRequestForm expects
+        //     const formData = new URLSearchParams();
+        //     formData.append('username', email);
+        //     formData.append('password', password);
+
+        //     try {
+        //         // Talk to your Python backend /login endpoint
+        //         const response = await fetch('/login', {
+        //             method: 'POST',
+        //             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        //             body: formData
+        //         });
+
+        //         const data = await response.json();
+
+        //         if (!response.ok) {
+        //             throw new Error(data.detail || 'Login failed');
+        //         }
+
+        //         // SUCCESS: Save token to browser memory and load dashboard
+        //         localStorage.setItem('token', data.access_token);
+        //         loadDashboard();
+
+        //     } catch (err) {
+        //         errorMsg.innerText = err.message;
+        //         errorMsg.classList.remove('hidden');
+        //     }
+        // }
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            errorMsg.classList.add('hidden');
+
+            // Form data structure that OAuth2PasswordRequestForm strictly expects
+            const formData = new URLSearchParams();
+            formData.append('username', email); // FastAPI form expects 'username'
+            formData.append('password', password);
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Fixes the [object Object] error by extracting the text detail
+                    throw new Error(data.detail || 'Login failed');
+                }
+
+                // SUCCESS: Save token to browser memory and load dashboard
+                localStorage.setItem('token', data.access_token);
+                loadDashboard();
+
+            } catch (err) {
+                errorMsg.innerText = err.message;
+                errorMsg.classList.remove('hidden');
+            }
+        }
+        async function loadDashboard() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                // Talk to your Python backend /dashboard endpoint, passing the generic Authorization token
+                const response = await fetch('/dashboard', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update UI views
+                    document.getElementById('user-display').innerText = `Logged in as: ${data.user_email}`;
+                    document.getElementById('dashboard-data').innerText = JSON.stringify(data, null, 2);
+                    
+                    // Switch views
+                    document.getElementById('login-card').classList.add('hidden');
+                    document.getElementById('dashboard-card').classList.remove('hidden');
+                }
+            } catch (err) {
+                handleLogout();
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('token');
+            document.getElementById('login-card').classList.remove('hidden');
+            document.getElementById('dashboard-card').classList.add('hidden');
+        }
+
+        // Check if user is already logged in when page loads
+        window.onload = loadDashboard;
+    </script>
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Boilerplate Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen flex items-center justify-center p-6">
+
+    <div id="login-card" class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-700">
+        <h2 class="text-2xl font-bold mb-6 text-center text-blue-400">Welcome to Your SaaS</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Email Address</label>
+                <input id="email" type="email" placeholder="you@example.com" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Password</label>
+                <input id="password" type="password" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500">
+            </div>
+            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold p-3 rounded-lg transition duration-200 mt-2 cursor-pointer">
+                Log In & Open Dashboard
+            </button>
+            <p id="error-msg" class="text-red-400 text-sm text-center hidden mt-2"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-card" class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-700 hidden">
+        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+            <div>
+                <h2 class="text-2xl font-bold text-green-400">Secure Dashboard</h2>
+                <p id="user-display" class="text-gray-400 text-sm mt-1"></p>
+            </div>
+            <button onclick="handleLogout()" class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs px-4 py-2 rounded-lg transition duration-200 cursor-pointer">
+                Log Out
+            </button>
+        </div>
+        
+        <div class="bg-gray-900 p-6 rounded-xl border border-gray-700">
+            <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Live Dynamic Server Payload</h3>
+            <pre id="dashboard-data" class="text-gray-200 font-mono text-sm overflow-x-auto whitespace-pre-wrap"></pre>
+        </div>
+    </div>
+
+    <script>
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.classList.add('hidden');
+
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Login failed');
+
+                localStorage.setItem('token', data.access_token);
+                loadDashboard();
+            } catch (err) {
+                errorMsg.innerText = err.message;
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        async function loadDashboard() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/dashboard', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('user-display').innerText = `Logged in as: ${data.user_email}`;
+                    document.getElementById('dashboard-data').innerText = JSON.stringify(data, null, 2);
+                    document.getElementById('login-card').classList.add('hidden');
+                    document.getElementById('dashboard-card').classList.remove('hidden');
+                } else {
+                    handleLogout();
+                }
+            } catch (err) {
+                handleLogout();
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('token');
+            document.getElementById('login-card').classList.remove('hidden');
+            document.getElementById('dashboard-card').classList.add('hidden');
+        }
+
+        window.onload = loadDashboard;
+    </script>
+</body>
+</html>
